@@ -8,8 +8,7 @@ variable "resource_group_name" {
   type        = string
 }
 
-variable "containers" {
-  description = "Containers, used by Blob Services"
-  type        = map(object({}))
-  default     = {}
+variable "function_app_src" {
+  description = "Path of the files, as source file root folder path, of the Function App"
+  type        = string
 }
