@@ -4,23 +4,23 @@ resource "random_string" "name_suffix" {
   upper   = false
 }
 
-resource "azurerm_resource_group" "resource_group" {
-  name     = "poc-terraform-${random_string.name_suffix.result}"
-  location = "France Central"
+module "resource_group" {
+  source      = "./base/resource_group"
+  name_suffix = random_string.name_suffix.result
 }
 
-resource "azurerm_storage_account" "storage_account" {
-  name                     = "poc${random_string.name_suffix.result}"
-  location                 = "France Central"
-  resource_group_name      = azurerm_resource_group.resource_group.name
-  account_tier             = "Standard"
-  account_replication_type = "LRS"
+module "storage_account" {
+  source              = "./base/storage_account"
+  name_suffix         = random_string.name_suffix.result
+  resource_group_name = module.resource_group.resource_group_name
+}
 
-  cross_tenant_replication_enabled = false
-  enable_https_traffic_only        = true
-  min_tls_version                  = "TLS1_2"
-  allow_nested_items_to_be_public  = false
-  shared_access_key_enabled        = false
-  default_to_oauth_authentication  = true
-  allowed_copy_scope               = "AAD"
+moved {
+  from = azurerm_resource_group.resource_group
+  to   = module.resource_group.azurerm_resource_group.resource_group
+}
+
+moved {
+  from = azurerm_storage_account.storage_account
+  to   = module.storage_account.azurerm_storage_account.storage_account
 }
