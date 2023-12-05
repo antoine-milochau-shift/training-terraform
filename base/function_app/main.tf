@@ -55,16 +55,15 @@ resource "azurerm_linux_function_app" "function_app" {
   storage_account_name          = module.function_app_technical_storage_account.storage_account_name
   storage_uses_managed_identity = true
   https_only                    = true
-
-  functions_extension_version = "~4"
+  functions_extension_version   = "~4"
 
   identity {
     type = "SystemAssigned"
   }
 
-  app_settings = {
+  app_settings = merge({
     WEBSITE_RUN_FROM_PACKAGE = azurerm_storage_blob.function_app_archive.url
-  }
+  }, var.extra_app_settings)
 
   site_config {
     ftps_state                       = "Disabled"
@@ -80,16 +79,12 @@ resource "azurerm_linux_function_app" "function_app" {
       dotnet_version              = "6.0"
       use_dotnet_isolated_runtime = true
     }
-
-    cors {
-      allowed_origins = ["https://portal.azure.com"]
-    }
   }
 }
 
-// Grant permission to the Function App to the whole Storage Account
+// Grant permission to the Function App to the whole technical Storage Account
 
-resource "azurerm_role_assignment" "data_owner" {
+resource "azurerm_role_assignment" "function_app_data_owner" {
   principal_id         = azurerm_linux_function_app.function_app.identity[0].principal_id
   role_definition_name = "Storage Blob Data Owner"
   scope                = module.function_app_technical_storage_account.storage_account_id

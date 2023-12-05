@@ -1,4 +1,5 @@
 using System.Net;
+using Azure.Identity;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
@@ -7,22 +8,40 @@ namespace FunctionApp1
 {
     public class Function1
     {
-        private readonly ILogger _logger;
+        private readonly ILogger logger;
 
         public Function1(ILoggerFactory loggerFactory)
         {
-            _logger = loggerFactory.CreateLogger<Function1>();
+            logger = loggerFactory.CreateLogger<Function1>();
         }
 
         [Function("Function1")]
-        public HttpResponseData Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = "test")] HttpRequestData req)
+        public async Task<HttpResponseData> RunAsync([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = "test")] HttpRequestData request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("C# HTTP trigger function processed a request.");
-
-            var response = req.CreateResponse(HttpStatusCode.OK);
+            HttpResponseData response = request.CreateResponse(HttpStatusCode.OK);
             response.Headers.Add("Content-Type", "text/plain; charset=utf-8");
+            // Get the request content, and concatenate it as a file content
+            var requestRoute = request.Url.ToString();
+            var requestBody = request.ReadAsString();
+            string content = $"Route: {requestRoute}\nBody: {requestBody}";
 
-            response.WriteString("Welcome to Azure Functions!");
+            // Create a blob in the Storage Account, to store the request content as a blob
+            var storageAccountName = Environment.GetEnvironmentVariable("STORAGE_ACCOUNT_CONTENT_NAME");
+            var blobServiceUri = new Uri($"https://{storageAccountName}.blob.core.windows.net");
+            var blobContainerName = "content";
+            var tokenCredential = new DefaultAzureCredential();
+            var blobServiceClient = new Azure.Storage.Blobs.BlobServiceClient(blobServiceUri, tokenCredential);
+            var blobContainerClient = blobServiceClient.GetBlobContainerClient(blobContainerName);
+
+            var blobName = Guid.NewGuid().ToString();
+            using var stream = new MemoryStream();
+            using var streamWriter = new StreamWriter(stream);
+            streamWriter.Write(content);
+
+            var blobClient = blobContainerClient.GetBlobClient(blobName);
+            await blobClient.UploadAsync(stream, cancellationToken);
+
+            response.WriteString($"Content has been stored into a blob (name: {blobName})");
 
             return response;
         }
