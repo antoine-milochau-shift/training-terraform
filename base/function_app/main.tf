@@ -1,3 +1,12 @@
+module "resource_naming" {
+  source  = "git::https://github.com/shift-technology/tf-modules-azure.git//base/conventions/resource_naming?ref=v1"
+  context = var.context
+}
+
+module "referential" {
+  source = "git::https://github.com/shift-technology/tf-modules-azure.git//base/conventions/referential?ref=v1"
+}
+
 // Publish Function App as a zipped file
 
 resource "null_resource" "function_app_deployment" {
@@ -21,7 +30,7 @@ data "archive_file" "function_app_files" {
 
 module "function_app_technical_storage_account" {
   source              = "../storage_account"
-  name_suffix         = "${var.name_suffix}func"
+  context             = var.context
   resource_group_name = var.resource_group_name
   containers = {
     "deployment" : {}
@@ -40,17 +49,19 @@ resource "azurerm_storage_blob" "function_app_archive" {
 // Defines the Function App
 
 resource "azurerm_service_plan" "service_plan" {
-  name                = "poc-${var.name_suffix}"
+  name                = module.resource_naming.naming.service_plan_name
+  location            = module.referential.locations[var.context.region]
+  tags                = module.resource_naming.common_tags
   resource_group_name = var.resource_group_name
-  location            = "France Central"
   os_type             = "Linux"
   sku_name            = "Y1"
 }
 
 resource "azurerm_linux_function_app" "function_app" {
-  name                          = "poc-${var.name_suffix}"
+  name                          = module.resource_naming.naming.function_app_name
+  location                      = module.referential.locations[var.context.region]
+  tags                          = module.resource_naming.common_tags
   resource_group_name           = var.resource_group_name
-  location                      = "France Central"
   service_plan_id               = azurerm_service_plan.service_plan.id
   storage_account_name          = module.function_app_technical_storage_account.storage_account_name
   storage_uses_managed_identity = true

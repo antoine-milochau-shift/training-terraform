@@ -1,6 +1,16 @@
+module "resource_naming" {
+  source  = "git::https://github.com/shift-technology/tf-modules-azure.git//base/conventions/resource_naming?ref=v1"
+  context = var.context
+}
+
+module "referential" {
+  source = "git::https://github.com/shift-technology/tf-modules-azure.git//base/conventions/referential?ref=v1"
+}
+
 resource "azurerm_storage_account" "storage_account" {
-  name                     = "poc${var.name_suffix}"
-  location                 = "France Central"
+  name                     = module.resource_naming.naming.storageaccount_name
+  location                 = module.referential.locations[var.context.region]
+  tags                     = module.resource_naming.common_tags
   resource_group_name      = var.resource_group_name
   account_tier             = "Standard"
   account_replication_type = "LRS"

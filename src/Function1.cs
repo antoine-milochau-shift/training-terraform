@@ -26,7 +26,7 @@ namespace FunctionApp1
             string content = $"Route: {requestRoute}\nBody: {requestBody}";
 
             // Create a blob in the Storage Account, to store the request content as a blob
-            var storageAccountName = Environment.GetEnvironmentVariable("STORAGE_ACCOUNT_CONTENT_NAME");
+            var storageAccountName = Environment.GetEnvironmentVariable("STORAGE_ACCOUNT__1");
             var blobServiceUri = new Uri($"https://{storageAccountName}.blob.core.windows.net");
             var blobContainerName = "content";
             var tokenCredential = new DefaultAzureCredential();
